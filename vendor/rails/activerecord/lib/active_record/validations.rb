@@ -10,7 +10,8 @@ module ActiveRecord
     attr_reader :record
     def initialize(record)
       @record = record
-      super("Validation failed: #{@record.errors.full_messages.join(", ")}")
+      errors = @record.errors.full_messages.join(I18n.t('support.array.words_connector', :default => ', '))
+      super(I18n.t('activerecord.errors.messages.record_invalid', :errors => errors))
     end
   end
 
@@ -726,7 +727,7 @@ module ActiveRecord
             comparison_operator = "IS ?"
           elsif column.text?
             comparison_operator = "#{connection.case_sensitive_equality_operator} ?"
-            value = column.limit ? value.to_s[0, column.limit] : value.to_s
+            value = column.limit ? value.to_s.mb_chars[0, column.limit] : value.to_s
           else
             comparison_operator = "= ?"
           end
