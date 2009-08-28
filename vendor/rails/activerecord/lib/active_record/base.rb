@@ -2435,13 +2435,15 @@ module ActiveRecord #:nodoc:
         @attributes_cache = {}
         @new_record = true
         ensure_proper_type
-        self.attributes = attributes unless attributes.nil?
-        self.class.send(:scope, :create).each { |att,value| self.send("#{att}=", value) } if self.class.send(:scoped?, :create)
+
+        self.attributes = attributes if attributes
+        assign_attributes(self.class.send(:scope,:create)) if self.class.send(:scoped?, :create)
+        
         result = yield self if block_given?
         callback(:after_initialize) if respond_to_without_attributes?(:after_initialize)
         result
       end
-
+     
       # A model instance's primary key is always available as model.id
       # whether you name it the default 'id' or set it to something else.
       def id
@@ -2733,19 +2735,9 @@ module ActiveRecord #:nodoc:
         return if new_attributes.nil?
         attributes = new_attributes.dup
         attributes.stringify_keys!
-
-        multi_parameter_attributes = []
+        
         attributes = remove_attributes_protected_from_mass_assignment(attributes) if guard_protected_attributes
-
-        attributes.each do |k, v|
-          if k.include?("(")
-            multi_parameter_attributes << [ k, v ]
-          else
-            respond_to?(:"#{k}=") ? send(:"#{k}=", v) : raise(UnknownAttributeError, "unknown attribute: #{k}")
-          end
-        end
-
-        assign_multiparameter_attributes(multi_parameter_attributes)
+        assign_attributes(attributes) if attributes.any?
       end
 
       # Returns a hash of all the attributes with their names as keys and the values of the attributes as values.
@@ -2862,6 +2854,24 @@ module ActiveRecord #:nodoc:
       end
 
     private
+
+      # Assigns attributes, dealing nicely with both multi and single paramater attributes
+      # Assumes attributes is a hash
+
+      def assign_attributes(attributes)
+        multiparameter_attributes = []
+        
+        attributes.each do |k, v|
+          if k.to_s.include?("(")
+            multiparameter_attributes << [ k, v ]
+          else
+            respond_to?(:"#{k}=") ? send(:"#{k}=", v) : raise(UnknownAttributeError, "unknown attribute: #{k}")
+          end
+        end
+
+        assign_multiparameter_attributes(multiparameter_attributes) unless  multiparameter_attributes.empty?        
+      end
+
       def create_or_update
         raise ReadOnlyRecord if readonly?
         result = new_record? ? create : update
