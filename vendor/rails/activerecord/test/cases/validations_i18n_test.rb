@@ -53,7 +53,7 @@ class ActiveRecordValidationsI18nTests < ActiveSupport::TestCase
 
   def test_percent_s_interpolation_syntax_in_error_messages_is_deprecated
     assert_deprecated('using %s in messages') do
-      I18n.t :does_not_exist, :default => "%s interpolation syntax is deprecated", :value => 'this'
+      I18n.t :does_not_exist, :default => "%s interpolation syntax is deprected", :value => 'this'
     end
   end
 
@@ -67,12 +67,6 @@ class ActiveRecordValidationsI18nTests < ActiveSupport::TestCase
   def test_percent_d_interpolation_syntax_in_error_messages_is_deprecated
     assert_deprecated('using %d in messages') do
       I18n.t :does_not_exist, :default => "%d interpolation syntaxes are deprected", :count => 2
-    end
-  end
-
-  def test_percent_s_interpolation_syntax_not_changed_when_no_values_were_passed
-    assert_not_deprecated do
-      I18n.t :does_not_exist, :default => "%d interpolation syntaxes are deprected"
     end
   end
 
@@ -736,9 +730,10 @@ class ActiveRecordValidationsI18nTests < ActiveSupport::TestCase
     @topic.valid?
     assert_equal "I am a custom error", @topic.errors.on(:title)
   end
+
 end
 
-class ActiveRecordValidationsGenerateMessageI18nTests < ActiveSupport::TestCase
+class ActiveRecordValidationsGenerateMessageI18nTests < Test::Unit::TestCase
   def setup
     reset_callbacks Topic
     @topic = Topic.new
@@ -916,12 +911,5 @@ class ActiveRecordValidationsGenerateMessageI18nTests < ActiveSupport::TestCase
   def test_generate_message_even_with_default_message
     assert_equal "must be even", @topic.errors.generate_message(:title, :even, :default => nil, :value => 'title', :count => 10)
   end
-  # ActiveRecord#RecordInvalid exception
 
-  test "RecordInvalid exception can be localized" do
-    topic = Topic.new
-    topic.errors.add(:title, :invalid)
-    topic.errors.add(:title, :blank)
-    assert_equal "Validation failed: Title is invalid, Title can't be blank", ActiveRecord::RecordInvalid.new(topic).message
-  end
 end

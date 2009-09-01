@@ -1,6 +1,5 @@
 require 'abstract_unit'
 require 'controller/fake_controllers'
-require 'action_controller/routing/route_set'
 
 class MilestonesController < ActionController::Base
   def index() head :ok end
@@ -743,7 +742,7 @@ class MockController
   end
 end
 
-class LegacyRouteSetTests < ActiveSupport::TestCase
+class LegacyRouteSetTests < Test::Unit::TestCase
   attr_reader :rs
 
   def setup
@@ -757,10 +756,6 @@ class LegacyRouteSetTests < ActiveSupport::TestCase
   
   def teardown
     @rs.clear!
-  end
-
-  def test_routes_for_controller_and_action_deprecated
-    assert_deprecated { @rs.routes_for_controller_and_action("controller", "action") }
   end
 
   def test_default_setup
@@ -1610,7 +1605,7 @@ class RouteTest < Test::Unit::TestCase
     end
 end
 
-class RouteSetTest < ActiveSupport::TestCase
+class RouteSetTest < Test::Unit::TestCase
   def set
     @set ||= ROUTING::RouteSet.new
   end
@@ -2191,10 +2186,8 @@ class RouteSetTest < ActiveSupport::TestCase
       map.connect "/ws/people", :controller => "people", :action => "index", :ws => true
     end
 
-    assert_deprecated {
-      url = set.generate(:controller => "people", :action => "index", :ws => true)
-      assert_equal "/ws/people", url
-    }
+    url = set.generate(:controller => "people", :action => "index", :ws => true)
+    assert_equal "/ws/people", url
   end
 
   def test_generate_changes_controller_module

@@ -1364,7 +1364,7 @@ module ActiveRecord #:nodoc:
         end
         defaults << options[:default] if options[:default]
         defaults.flatten!
-        defaults << attribute_key_name.to_s.humanize
+        defaults << attribute_key_name.humanize
         options[:count] ||= 1
         I18n.translate(defaults.shift, options.merge(:default => defaults, :scope => [:activerecord, :attributes]))
       end
@@ -2294,24 +2294,20 @@ module ActiveRecord #:nodoc:
         # And for value objects on a composed_of relationship:
         #   { :address => Address.new("123 abc st.", "chicago") }
         #     # => "address_street='123 abc st.' and address_city='chicago'"
-        def sanitize_sql_hash_for_conditions(attrs, default_table_name = quoted_table_name)
+        def sanitize_sql_hash_for_conditions(attrs, table_name = quoted_table_name)
           attrs = expand_hash_conditions_for_aggregates(attrs)
 
           conditions = attrs.map do |attr, value|
-            table_name = default_table_name
-
             unless value.is_a?(Hash)
               attr = attr.to_s
 
               # Extract table name from qualified attribute names.
               if attr.include?('.')
-                attr_table_name, attr = attr.split('.', 2)
-                attr_table_name = connection.quote_table_name(attr_table_name)
-              else
-                attr_table_name = table_name
+                table_name, attr = attr.split('.', 2)
+                table_name = connection.quote_table_name(table_name)
               end
 
-              attribute_condition("#{attr_table_name}.#{connection.quote_column_name(attr)}", value)
+              attribute_condition("#{table_name}.#{connection.quote_column_name(attr)}", value)
             else
               sanitize_sql_hash_for_conditions(value, connection.quote_table_name(attr.to_s))
             end
@@ -2435,15 +2431,13 @@ module ActiveRecord #:nodoc:
         @attributes_cache = {}
         @new_record = true
         ensure_proper_type
-
-        self.attributes = attributes if attributes
-        assign_attributes(self.class.send(:scope,:create)) if self.class.send(:scoped?, :create)
-        
+        self.attributes = attributes unless attributes.nil?
+        self.class.send(:scope, :create).each { |att,value| self.send("#{att}=", value) } if self.class.send(:scoped?, :create)
         result = yield self if block_given?
         callback(:after_initialize) if respond_to_without_attributes?(:after_initialize)
         result
       end
-     
+
       # A model instance's primary key is always available as model.id
       # whether you name it the default 'id' or set it to something else.
       def id
@@ -2735,9 +2729,19 @@ module ActiveRecord #:nodoc:
         return if new_attributes.nil?
         attributes = new_attributes.dup
         attributes.stringify_keys!
-        
+
+        multi_parameter_attributes = []
         attributes = remove_attributes_protected_from_mass_assignment(attributes) if guard_protected_attributes
-        assign_attributes(attributes) if attributes.any?
+
+        attributes.each do |k, v|
+          if k.include?("(")
+            multi_parameter_attributes << [ k, v ]
+          else
+            respond_to?(:"#{k}=") ? send(:"#{k}=", v) : raise(UnknownAttributeError, "unknown attribute: #{k}")
+          end
+        end
+
+        assign_multiparameter_attributes(multi_parameter_attributes)
       end
 
       # Returns a hash of all the attributes with their names as keys and the values of the attributes as values.
@@ -2854,24 +2858,6 @@ module ActiveRecord #:nodoc:
       end
 
     private
-
-      # Assigns attributes, dealing nicely with both multi and single paramater attributes
-      # Assumes attributes is a hash
-
-      def assign_attributes(attributes)
-        multiparameter_attributes = []
-        
-        attributes.each do |k, v|
-          if k.to_s.include?("(")
-            multiparameter_attributes << [ k, v ]
-          else
-            respond_to?(:"#{k}=") ? send(:"#{k}=", v) : raise(UnknownAttributeError, "unknown attribute: #{k}")
-          end
-        end
-
-        assign_multiparameter_attributes(multiparameter_attributes) unless  multiparameter_attributes.empty?        
-      end
-
       def create_or_update
         raise ReadOnlyRecord if readonly?
         result = new_record? ? create : update
@@ -3042,22 +3028,16 @@ module ActiveRecord #:nodoc:
 
       def execute_callstack_for_multiparameter_attributes(callstack)
         errors = []
-        callstack.each do |name, values_with_empty_parameters|
+        callstack.each do |name, values|
           begin
             klass = (self.class.reflect_on_aggregation(name.to_sym) || column_for_attribute(name)).klass
-            # in order to allow a date to be set without a year, we must keep the empty values.
-            # Otherwise, we wouldn't be able to distinguish it from a date with an empty day.
-            values = values_with_empty_parameters.reject(&:nil?)
-
             if values.empty?
               send(name + "=", nil)
             else
-
               value = if Time == klass
                 instantiate_time_object(name, values)
               elsif Date == klass
                 begin
-                  values = values_with_empty_parameters.collect do |v| v.nil? ? 1 : v end
                   Date.new(*values)
                 rescue ArgumentError => ex # if Date.new raises an exception on an invalid date
                   instantiate_time_object(name, values).to_date # we instantiate Time object and convert it back to a date thus using Time's logic in handling invalid dates
@@ -3085,8 +3065,10 @@ module ActiveRecord #:nodoc:
           attribute_name = multiparameter_name.split("(").first
           attributes[attribute_name] = [] unless attributes.include?(attribute_name)
 
-          parameter_value = value.empty? ? nil : type_cast_attribute_value(multiparameter_name, value)
-          attributes[attribute_name] << [ find_parameter_position(multiparameter_name), parameter_value ]
+          unless value.empty?
+            attributes[attribute_name] <<
+              [ find_parameter_position(multiparameter_name), type_cast_attribute_value(multiparameter_name, value) ]
+          end
         end
 
         attributes.each { |name, values| attributes[name] = values.sort_by{ |v| v.first }.collect { |v| v.last } }

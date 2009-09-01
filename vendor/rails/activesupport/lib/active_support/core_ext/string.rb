@@ -1,7 +1,6 @@
 # encoding: utf-8
 
 require 'active_support/core_ext/string/inflections'
-require 'active_support/core_ext/string/bytesize'
 require 'active_support/core_ext/string/conversions'
 require 'active_support/core_ext/string/access'
 require 'active_support/core_ext/string/starts_ends_with'

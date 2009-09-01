@@ -33,31 +33,30 @@ module ActionView
       end
 
       # Truncates a given +text+ after a given <tt>:length</tt> if +text+ is longer than <tt>:length</tt>
-      # (defaults to 30). The last characters will be replaced with the <tt>:omission</tt> (defaults to "...")
-      # for a total length not exceeding <tt>:length</tt>.
+      # (defaults to 30). The last characters will be replaced with the <tt>:omission</tt> (defaults to "...").
       #
       # ==== Examples
       #
       #   truncate("Once upon a time in a world far far away")
-      #   # => Once upon a time in a world...
+      #   # => Once upon a time in a world f...
       #
       #   truncate("Once upon a time in a world far far away", :length => 14)
       #   # => Once upon a...
       #
       #   truncate("And they found that many people were sleeping better.", :length => 25, "(clipped)")
-      #   # => And they found t(clipped)
+      #   # => And they found that many (clipped)
       #
-      #   truncate("And they found that many people were sleeping better.", :omission => "... (continued)", :length => 25)
-      #   # => And they f... (continued)
+      #   truncate("And they found that many people were sleeping better.", :omission => "... (continued)", :length => 15)
+      #   # => And they found... (continued)
       #
       # You can still use <tt>truncate</tt> with the old API that accepts the
       # +length+ as its optional second and the +ellipsis+ as its
       # optional third parameter:
       #   truncate("Once upon a time in a world far far away", 14)
-      #   # => Once upon a...
+      #   # => Once upon a time in a world f...
       #
-      #   truncate("And they found that many people were sleeping better.", 25, "... (continued)")
-      #   # => And they f... (continued)
+      #   truncate("And they found that many people were sleeping better.", 15, "... (continued)")
+      #   # => And they found... (continued)
       def truncate(text, *args)
         options = args.extract_options!
         unless args.empty?
@@ -235,20 +234,12 @@ module ActionView
       #
       #   textilize("Visit the Rails website "here":http://www.rubyonrails.org/.)
       #   # => "<p>Visit the Rails website <a href="http://www.rubyonrails.org/">here</a>.</p>"
-      #
-      #   textilize("This is worded <strong>strongly</strong>")
-      #   # => "<p>This is worded <strong>strongly</strong></p>"
-      #
-      #   textilize("This is worded <strong>strongly</strong>", :filter_html)
-      #   # => "<p>This is worded &lt;strong&gt;strongly&lt;/strong&gt;</p>"
-      #
-      def textilize(text, *options)
-        options ||= [:hard_breaks]
-
+      def textilize(text)
         if text.blank?
           ""
         else
-          textilized = RedCloth.new(text, options)
+          textilized = RedCloth.new(text, [ :hard_breaks ])
+          textilized.hard_breaks = true if textilized.respond_to?(:hard_breaks=)
           textilized.to_html
         end
       end

@@ -178,7 +178,7 @@ module ActiveRecord #:nodoc:
     end
 
     def root
-      root = (options[:root] || @record.class.model_name.singular).to_s
+      root = (options[:root] || @record.class.to_s.underscore).to_s
       reformat_name(root)
     end
 
@@ -320,11 +320,7 @@ module ActiveRecord #:nodoc:
 
       protected
         def compute_type
-          type = if @record.class.serialized_attributes.has_key?(name)
-                   :yaml
-                 else
-                   @record.class.columns_hash[name].try(:type)
-                 end
+          type = @record.class.serialized_attributes.has_key?(name) ? :yaml : @record.class.columns_hash[name].type
 
           case type
             when :text

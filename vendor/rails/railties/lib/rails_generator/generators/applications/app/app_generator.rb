@@ -125,7 +125,6 @@ class AppGenerator < Rails::Generator::Base
       create_database_configuration_file(m)
       create_routes_file(m)
       create_locale_file(m)
-      create_seeds_file(m)
       create_initializer_files(m)
       create_environment_files(m)
     end
@@ -175,10 +174,6 @@ class AppGenerator < Rails::Generator::Base
     
     def create_routes_file(m)
       m.file "configs/routes.rb", "config/routes.rb"
-    end
-
-    def create_seeds_file(m)
-      m.file "configs/seeds.rb", "db/seeds.rb"
     end
 
     def create_initializer_files(m)

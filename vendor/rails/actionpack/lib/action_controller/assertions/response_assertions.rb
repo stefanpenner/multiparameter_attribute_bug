@@ -64,9 +64,7 @@ module ActionController
           # Support partial arguments for hash redirections
           if options.is_a?(Hash) && @response.redirected_to.is_a?(Hash)
             if options.all? {|(key, value)| @response.redirected_to[key] == value}
-              callstack = caller.dup
-              callstack.slice!(0, 2)
-              ::ActiveSupport::Deprecation.warn("Using assert_redirected_to with partial hash arguments is deprecated. Specify the full set arguments instead", callstack)
+              ::ActiveSupport::Deprecation.warn("Using assert_redirected_to with partial hash arguments is deprecated. Specify the full set arguments instead", caller)
               return true
             end
           end

@@ -84,6 +84,7 @@ HEADER
           elsif @connection.respond_to?(:primary_key)
             pk = @connection.primary_key(table)
           end
+          pk ||= 'id'
           
           tbl.print "  create_table #{table.inspect}"
           if columns.detect { |c| c.name == pk }

@@ -24,30 +24,14 @@ PKG_FILES = FileList[
     "lib/**/*", "test/**/*", "examples/**/*", "doc/**/*", "[A-Z]*", "install.rb", "Rakefile"
 ].exclude(/\bCVS\b|~$/)
 
-def run_without_aborting(*tasks)
-  errors = []
-
-  tasks.each do |task|
-    begin
-      Rake::Task[task].invoke
-    rescue Exception
-      errors << task
-    end
-  end
-
-  abort "Errors running #{errors.join(', ')}" if errors.any?
-end
 
 desc 'Run mysql, sqlite, and postgresql tests by default'
 task :default => :test
 
 desc 'Run mysql, sqlite, and postgresql tests'
-task :test do
-  tasks = defined?(JRUBY_VERSION) ?
-    %w(test_jdbcmysql test_jdbcsqlite3 test_jdbcpostgresql) :
-    %w(test_mysql test_sqlite3 test_postgresql)
-  run_without_aborting(*tasks)
-end
+task :test => defined?(JRUBY_VERSION) ?
+  %w(test_jdbcmysql test_jdbcsqlite3 test_jdbcpostgresql) :
+  %w(test_mysql test_sqlite3 test_postgresql)
 
 for adapter in %w( mysql postgresql sqlite sqlite3 firebird db2 oracle sybase openbase frontbase jdbcmysql jdbcpostgresql jdbcsqlite3 jdbcderby jdbch2 jdbchsqldb )
   Rake::TestTask.new("test_#{adapter}") { |t|
@@ -69,8 +53,8 @@ end
 namespace :mysql do
   desc 'Build the MySQL test databases'
   task :build_databases do
-    %x( echo "create DATABASE activerecord_unittest DEFAULT CHARACTER SET utf8 DEFAULT COLLATE utf8_unicode_ci " | mysql --user=#{MYSQL_DB_USER})
-    %x( echo "create DATABASE activerecord_unittest2 DEFAULT CHARACTER SET utf8 DEFAULT COLLATE utf8_unicode_ci " | mysql --user=#{MYSQL_DB_USER})
+    %x( mysqladmin --user=#{MYSQL_DB_USER} create activerecord_unittest )
+    %x( mysqladmin --user=#{MYSQL_DB_USER} create activerecord_unittest2 )
   end
 
   desc 'Drop the MySQL test databases'
@@ -91,8 +75,8 @@ task :rebuild_mysql_databases => 'mysql:rebuild_databases'
 namespace :postgresql do
   desc 'Build the PostgreSQL test databases'
   task :build_databases do
-    %x( createdb -E UTF8 activerecord_unittest )
-    %x( createdb -E UTF8 activerecord_unittest2 )
+    %x( createdb activerecord_unittest )
+    %x( createdb activerecord_unittest2 )
   end
 
   desc 'Drop the PostgreSQL test databases'
@@ -259,12 +243,11 @@ end
 
 desc "Publish the release files to RubyForge."
 task :release => [ :package ] do
-  require 'rubyforge'
-  require 'rake/contrib/rubyforgepublisher'
+  `rubyforge login`
 
-  packages = %w( gem tgz zip ).collect{ |ext| "pkg/#{PKG_NAME}-#{PKG_VERSION}.#{ext}" }
-
-  rubyforge = RubyForge.new
-  rubyforge.login
-  rubyforge.add_release(PKG_NAME, PKG_NAME, "REL #{PKG_VERSION}", *packages)
+  for ext in %w( gem tgz zip )
+    release_command = "rubyforge add_release #{PKG_NAME} #{PKG_NAME} 'REL #{PKG_VERSION}' pkg/#{PKG_NAME}-#{PKG_VERSION}.#{ext}"
+    puts release_command
+    system(release_command)
+  end
 end

@@ -5,8 +5,6 @@ require 'models/edge'
 require 'models/owner'
 require 'models/pet'
 require 'models/toy'
-require 'models/club'
-require 'models/organization'
 
 Company.has_many :accounts
 
@@ -226,10 +224,6 @@ class CalculationsTest < ActiveRecord::TestCase
 
   def test_should_sum_scoped_field
     assert_equal 15, companies(:rails_core).companies.sum(:id)
-  end
-
-  def test_should_sum_scoped_field_with_from
-    assert_equal Club.count, Organization.clubs.count
   end
 
   def test_should_sum_scoped_field_with_conditions

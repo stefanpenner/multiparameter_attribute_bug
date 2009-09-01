@@ -317,11 +317,11 @@ class AssociationsJoinModelTest < ActiveRecord::TestCase
   end
 
   def test_belongs_to_polymorphic_with_counter_cache
-    assert_equal 1, posts(:welcome)[:taggings_count]
+    assert_equal 0, posts(:welcome)[:taggings_count]
     tagging = posts(:welcome).taggings.create(:tag => tags(:general))
-    assert_equal 2, posts(:welcome, :reload)[:taggings_count]
-    tagging.destroy
     assert_equal 1, posts(:welcome, :reload)[:taggings_count]
+    tagging.destroy
+    assert posts(:welcome, :reload)[:taggings_count].zero?
   end
 
   def test_unavailable_through_reflection
@@ -377,7 +377,7 @@ class AssociationsJoinModelTest < ActiveRecord::TestCase
   end
 
   def test_has_many_through_polymorphic_has_one
-    assert_equal Tagging.find(1,2).sort_by { |t| t.id }, authors(:david).tagging
+    assert_raise(ActiveRecord::HasManyThroughSourceAssociationMacroError) { authors(:david).tagging }
   end
 
   def test_has_many_through_polymorphic_has_many
